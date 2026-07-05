@@ -89,6 +89,6 @@ NPM 文件是 ES 模块，但还有包含 <a href="https://www.davidbcalhoun.com
 在友好的 <a href="https://gsap.com/community/">GSAP 论坛</a>中提问。或者分享你的知识去帮助别人——这是提升技能的好方法！也可以在那里报告任何 bug（如果你 href="https://github.com/greensock/GSAP提交 issue</a>）。
 
 ### 许可证
-GreenSock 的标准"免费使用"许可证可在 <a href="https://gsap.com/standard-license">https://gsap.com/standard-license</a> 查看。
+GreenSock 的标准"免费使用"许可证可在 <a href="https://gsap.com/standard-license">https://gsap.com/standard-license</a> 查看
 
 Copyright (c) 2008-2026, GreenSock. All rights reserved.
