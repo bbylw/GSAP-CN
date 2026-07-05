@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GSAP — 让一切动起来</title>
+  <meta name="description" content="GSAP 是一个框架无关的 JavaScript 动画库，构建可在所有主流浏览器中运行的高性能动画。" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- GSAP -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.15/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.15/dist/ScrollTrigger.min.js"></script>
+
+  <!-- Tailwind 配置（外部文件，避免 CSP 内联脚本限制） -->
+  <script src="tailwind.config.js"></script>
+
+  <style>
+    :root {
+      --bg: #0a0c0a;
+      --bg2: #0f1310;
+      --accent: #a3e635;
+      --accent2: #88ce02;
+      --text: #f4f4f0;
+      --muted: #8a8f86;
+      --border: rgba(163, 230, 53, 0.12);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: '"Noto Sans SC"', '"Space Grotesk"', sans-serif;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(163, 230, 53, 0.08), transparent 70%),
+        radial-gradient(ellipse 60% 50% at 100% 100%, rgba(101, 163, 13, 0.05), transparent 70%),
+        var(--bg);
+    }
+
+    /* Noise overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: rgba(163, 230, 53, 0.3); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(163, 230, 53, 0.5); }
+
+    /* Char reveal */
+    .char {
+      display: inline-block;
+      will-change: transform, opacity;
+    }
+
+    /* Magnetic button */
+    .magnetic-btn {
+      will-change: transform;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Marquee */
+    .marquee-track {
+      display: flex;
+      gap: 4rem;
+      white-space: nowrap;
+      will-change: transform;
+    }
+
+    /* Horizontal scroll panels */
+    .h-panel {
+      flex-shrink: 0;
+      width: 80vw;
+      max-width: 700px;
+    }
+
+    /* Gradient text */
+    .gradient-lime {
+      background: linear-gradient(135deg, #a3e635 0%, #88ce02 50%, #65a30d 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* GSAP splits text into .char spans — gradient must be re-applied per char */
+    .gradient-lime .char {
+      background: linear-gradient(135deg, #a3e635 0%, #88ce02 50%, #65a30d 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Glass card */
+    .glass {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(10px);
+    }
+
+    .glass-lime {
+      background: rgba(163, 230, 53, 0.04);
+      border: 1px solid rgba(163, 230, 53, 0.12);
+    }
+
+    /* Glow */
+    .glow-lime {
+      box-shadow: 0 0 60px rgba(163, 230, 53, 0.15), inset 0 1px 0 rgba(163, 230, 53, 0.1);
+    }
+
+    /* Progress bar */
+    #scroll-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #a3e635, #88ce02);
+      z-index: 10000;
+      width: 0%;
+      will-change: width;
+    }
+
+    /* Floating shapes */
+    .float-shape {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(40px);
+      pointer-events: none;
+      will-change: transform;
+    }
+
+    /* Code block */
+    .code-block {
+      background: #06080700;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .code-block pre {
+      padding: 1.5rem;
+      font-family: '"JetBrains Mono"', monospace;
+      font-size: 0.875rem;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+
+    .code-block .code-tag { color: #88ce02; }
+    .code-block .code-attr { color: #a3e635; }
+    .code-block .code-str { color: #fbbf24; }
+    .code-block .code-com { color: #4a5247; }
+    .code-block .code-kw { color: #c084fc; }
+    .code-block .code-fn { color: #60a5fa; }
+
+    /* Reveal animation initial state */
+    .reveal-up { opacity: 0; transform: translateY(60px); }
+    .reveal-scale { opacity: 0; transform: scale(0.8); }
+    .reveal-left { opacity: 0; transform: translateX(-60px); }
+    .reveal-right { opacity: 0; transform: translateX(60px); }
+
+    /* SVG draw */
+    .svg-draw path {
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+    }
+
+    /* Pin spacer */
+    .pin-section {
+      will-change: transform;
+    }
+
+    /* Bento card hover */
+    .bento-card {
+      transition: border-color 0.3s, background 0.3s;
+    }
+    .bento-card:hover {
+      border-color: rgba(163, 230, 53, 0.3);
+      background: rgba(163, 230, 53, 0.06);
+    }
+
+    /* Link underline */
+    .link-underline {
+      position: relative;
+      display: inline-block;
+    }
+    .link-underline::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 0;
+      height: 1px;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+    .link-underline:hover::after { width: 100%; }
+
+    /* Loader */
+    #loader {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 10001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .loader-bar {
+      width: 200px;
+      height: 2px;
+      background: rgba(163, 230, 53, 0.15);
+      border-radius: 1px;
+      overflow: hidden;
+    }
+
+    .loader-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      border-radius: 1px;
+    }
+
+    /* Nav blur */
+    .nav-blur {
+      background: rgba(10, 12, 10, 0.6);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Number counter */
+    .counter-num {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Hero grid background */
+    .hero-grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(163, 230, 53, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(163, 230, 53, 0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 30%, transparent 80%);
+      -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 30%, transparent 80%);
+      pointer-events: none;
+    }
+
+    /* Hero code preview card */
+    .hero-code-card {
+      background: rgba(15, 19, 16, 0.8);
+      border: 1px solid rgba(163, 230, 53, 0.15);
+      border-radius: 16px;
+      backdrop-filter: blur(20px);
+      box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.5),
+        0 0 40px rgba(163, 230, 53, 0.05),
+        inset 0 1px 0 rgba(163, 230, 53, 0.08);
+      overflow: hidden;
+    }
+
+    .hero-code-card .code-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(163, 230, 53, 0.08);
+      background: rgba(163, 230, 53, 0.02);
+    }
+
+    .hero-code-card .code-body {
+      padding: 20px;
+      font-family: '"JetBrains Mono"', monospace;
+      font-size: 0.8rem;
+      line-height: 1.8;
+    }
+
+    .hero-code-card .typing-cursor {
+      display: inline-block;
+      width: 8px;
+      height: 14px;
+      background: var(--accent);
+      vertical-align: middle;
+      animation: blink 0.8s infinite;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    /* Rotating ring decoration */
+    .hero-ring {
+      position: absolute;
+      border: 1px solid rgba(163, 230, 53, 0.1);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .hero-ring::before {
+      content: '';
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      top: -3px;
+      left: 50%;
+      transform: translateX(-50%);
+      box-shadow: 0 0 10px rgba(163, 230, 53, 0.6);
+    }
+
+    /* Hero stat divider */
+    .hero-stat-item {
+      position: relative;
+    }
+
+    .hero-stat-item:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 1px;
+      height: 60%;
+      background: linear-gradient(to bottom, transparent, rgba(163, 230, 53, 0.12), transparent);
+    }
+
+    /* Hero badge decorative */
+    .hero-version-badge {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      letter-spacing: 0.2em;
+    }
+
+    @media (max-width: 768px) {
+      .h-panel { width: 85vw; }
+      .hero-grid-bg { background-size: 40px 40px; }
+    }
+  </style>
+</head>
+<body class="font-body">
+
+  <!-- Loader -->
+  <div id="loader">
+    <div class="font-display text-3xl font-bold tracking-tighter text-lime">GSAP</div>
+    <div class="loader-bar"><div class="loader-bar-fill" id="loader-fill"></div></div>
+    <div class="font-mono text-xs text-ash">正在加载动画引擎…</div>
+  </div>
+
+  <!-- Scroll Progress -->
+  <div id="scroll-progress"></div>
+
+  <!-- Floating background shapes -->
+  <div class="float-shape" style="width: 500px; height: 500px; background: rgba(163, 230, 53, 0.06); top: 10%; right: -10%;" data-parallax="0.3"></div>
+  <div class="float-shape" style="width: 350px; height: 350px; background: rgba(101, 163, 13, 0.05); top: 60%; left: -5%;" data-parallax="0.5"></div>
+  <div class="float-shape" style="width: 400px; height: 400px; background: rgba(163, 230, 53, 0.04); top: 120%; right: 10%;" data-parallax="0.4"></div>
+
+  <!-- Navigation -->
+  <nav class="fixed top-0 left-0 right-0 z-50 nav-blur">
+    <div class="max-w-[1400px] mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
+      <a href="#hero" class="font-display text-xl font-bold tracking-tighter flex items-center gap-2">
+        <span class="text-lime">GSAP</span>
+        <span class="text-ash text-xs font-mono hidden sm:inline">v3.15</span>
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm text-ash">
+        <a href="#intro" class="link-underline hover:text-paper transition-colors">简介</a>
+        <a href="#features" class="link-underline hover:text-paper transition-colors">特性</a>
+        <a href="#scroll-demo" class="link-underline hover:text-paper transition-colors">滚动动画</a>
+        <a href="#plugins" class="link-underline hover:text-paper transition-colors">插件</a>
+        <a href="#install" class="link-underline hover:text-paper transition-colors">安装</a>
+      </div>
+      <a href="https://gsap.com/get-started" target="_blank" rel="noopener" class="magnetic-btn px-5 py-2 text-sm font-medium bg-lime text-ink rounded-full hover:bg-lime2 transition-colors">
+        开始使用
+      </a>
+    </div>
+  </nav>
+
+  <!-- ===================== HERO ===================== -->
+  <section id="hero" class="relative min-h-[100dvh] flex items-center overflow-hidden">
+    <!-- Grid background -->
+    <div class="hero-grid-bg"></div>
+
+    <!-- Decorative rotating rings -->
+    <div class="hero-ring" style="width: 500px; height: 500px; top: 50%; right: -150px; transform: translateY(-50%);" data-parallax="0.15"></div>
+    <div class="hero-ring" style="width: 700px; height: 700px; top: 50%; right: -250px; transform: translateY(-50%); opacity: 0.5;" data-parallax="0.1"></div>
+
+    <!-- Version badge (vertical, left edge) -->
+    <div class="hidden lg:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 flex-col items-center gap-4">
+      <span class="hero-version-badge text-xs font-mono text-ash">v3.15 · 2026</span>
+      <div class="w-px h-20 bg-gradient-to-b from-lime/30 to-transparent"></div>
+    </div>
+
+    <div class="max-w-[1400px] mx-auto px-6 lg:px-10 w-full relative z-10">
+      <div class="grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+
+        <!-- Left column: Title + CTA (8 cols) -->
+        <div class="lg:col-span-8">
+
+          <!-- Tag -->
+          <div class="hero-tag mb-8 inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-lime text-xs font-mono text-lime">
+            <span class="w-1.5 h-1.5 rounded-full bg-lime animate-pulse"></span>
+            GreenSock 动画平台 · 100% 免费
+          </div>
+
+          <!-- Main title -->
+          <h1 class="font-display font-bold tracking-tighter leading-[0.85] mb-8">
+            <span class="block text-[clamp(2.5rem,9vw,8rem)] overflow-hidden">
+              <span class="hero-line block" data-text="万物">万物</span>
+            </span>
+            <span class="block text-[clamp(2.5rem,9vw,8rem)] overflow-hidden">
+              <span class="hero-line block gradient-lime" data-text="皆可动">皆可动</span>
+            </span>
+          </h1>
+
+          <!-- Subtitle + CTA row -->
+          <div class="flex flex-col lg:flex-row lg:items-end gap-8 lg:gap-12 mb-0">
+            <div class="hero-sub flex-1 max-w-[520px]">
+              <p class="text-base lg:text-lg text-ash leading-relaxed">
+                一个<strong class="text-paper font-medium">框架无关的</strong> JavaScript 动画库。构建可在所有主流浏览器中运行的高性能动画——CSS、SVG、Canvas、React、Vue、WebGL、颜色、运动路径……一切 JavaScript 能触及的对象。
+              </p>
+            </div>
+
+            <!-- CTA buttons -->
+            <div class="hero-cta flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <a href="https://gsap.com/get-started" target="_blank" rel="noopener" class="magnetic-btn group px-6 py-3 bg-lime text-ink rounded-full font-medium flex items-center gap-2 hover:bg-lime2 transition-colors text-sm">
+                立即开始
+                <svg class="w-4 h-4 transition-transform group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </a>
+              <a href="https://gsap.com/docs" target="_blank" rel="noopener" class="px-6 py-3 glass rounded-full font-medium text-paper hover:bg-white/5 transition-colors flex items-center gap-2 text-sm">
+                查看文档
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right column: Code preview card (4 cols) -->
+        <div class="hero-code hidden lg:block lg:col-span-4">
+          <div class="hero-code-card relative">
+            <!-- Code header -->
+            <div class="code-header">
+              <span class="w-3 h-3 rounded-full bg-red-500/40"></span>
+              <span class="w-3 h-3 rounded-full bg-yellow-500/40"></span>
+              <span class="w-3 h-3 rounded-full bg-green-500/40"></span>
+              <span class="ml-2 text-xs font-mono text-ash">gsap.min.js</span>
+              <span class="ml-auto text-xs font-mono text-lime/60">v3.15</span>
+            </div>
+            <!-- Code body -->
+            <div class="code-body">
+              <div class="text-ash/40 mb-2">// 让一切动起来</div>
+              <div><span class="code-kw">gsap</span>.<span class="code-fn">to</span>(<span class="code-str">'.anything'</span>, {</div>
+              <div class="pl-4"><span class="code-attr">duration</span>: <span class="code-str">2</span>,</div>
+              <div class="pl-4"><span class="code-attr">x</span>: <span class="code-str">100</span>,</div>
+              <div class="pl-4"><span class="code-attr">rotation</span>: <span class="code-str">360</span>,</div>
+              <div class="pl-4"><span class="code-attr">ease</span>: <span class="code-str">'power3.out'</span>,</div>
+              <div class="pl-4"><span class="code-attr">scrollTrigger</span>: {</div>
+              <div class="pl-8"><span class="code-attr">trigger</span>: <span class="code-str">'.section'</span>,</div>
+              <div class="pl-8"><span class="code-attr">scrub</span>: <span class="code-kw">true</span></div>
+              <div class="pl-4">}</div>
+              <div>});<span class="typing-cursor"></span></div>
+            </div>
+            <!-- Footer badge -->
+            <div class="px-4 py-2.5 border-t border-white/5 flex items-center justify-between">
+              <span class="text-xs font-mono text-ash">20x faster than jQuery</span>
+              <span class="flex items-center gap-1.5 text-xs font-mono text-lime">
+                <span class="w-1.5 h-1.5 rounded-full bg-lime animate-pulse"></span>
+                60fps
+              </span>
+            </div>
+          </div>
+
+          <!-- Floating badge under code card -->
+          <div class="mt-4 flex items-center gap-3 px-4">
+            <div class="flex -space-x-2">
+              <div class="w-7 h-7 rounded-full bg-lime/20 border border-lime/30 flex items-center justify-center text-xs font-bold text-lime">R</div>
+              <div class="w-7 h-7 rounded-full bg-lime/30 border border-lime/40 flex items-center justify-center text-xs font-bold text-lime">V</div>
+              <div class="w-7 h-7 rounded-full bg-lime/40 border border-lime/50 flex items-center justify-center text-xs font-bold text-ink">+</div>
+            </div>
+            <span class="text-xs text-ash">支持 React · Vue · Svelte · 原生 JS</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats row (full width) -->
+      <div class="hero-stats grid grid-cols-2 md:grid-cols-4 gap-0 mt-16 pt-8 border-t border-white/5">
+        <div class="hero-stat-item px-4 first:pl-0">
+          <div class="font-display text-2xl lg:text-3xl font-bold text-lime counter-num" data-target="12000000" data-suffix="+">0</div>
+          <div class="text-xs lg:text-sm text-ash mt-1">网站使用</div>
+        </div>
+        <div class="hero-stat-item px-4">
+          <div class="font-display text-2xl lg:text-3xl font-bold text-lime counter-num" data-target="20" data-suffix="x">0</div>
+          <div class="text-xs lg:text-sm text-ash mt-1">快于 jQuery</div>
+        </div>
+        <div class="hero-stat-item px-4">
+          <div class="font-display text-2xl lg:text-3xl font-bold text-lime counter-num" data-target="100" data-suffix="%">0</div>
+          <div class="text-xs lg:text-sm text-ash mt-1">免费开源</div>
+        </div>
+        <div class="hero-stat-item px-4 last:pr-0">
+          <div class="font-display text-2xl lg:text-3xl font-bold text-lime counter-num" data-target="0" data-suffix="">0</div>
+          <div class="text-xs lg:text-sm text-ash mt-1">依赖项</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scroll hint -->
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-ash text-xs font-mono scroll-hint z-10">
+      <span>向下滚动</span>
+      <div class="w-px h-8 bg-gradient-to-b from-lime/40 to-transparent"></div>
+      <svg class="w-4 h-4 animate-bounce text-lime/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+    </div>
+  </section>
+
+  <!-- ===================== MARQUEE ===================== -->
+  <section class="py-8 border-y border-white/5 overflow-hidden bg-ink2/50">
+    <div class="marquee-track" id="marquee">
+      <span class="font-display text-2xl lg:text-3xl font-bold text-paper/20">高性能</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-lime/40">SCROLLTRIGGER</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-paper/20">零依赖</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-lime/40">SPLITTEXT</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-paper/20">框架无关</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-lime/40">MORPHSVG</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-paper/20">1200万+网站</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-lime/40">FLIP</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-paper/20">跨浏览器兼容</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-lime/40">MOTIONPATH</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-paper/20">高性能</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-lime/40">SCROLLTRIGGER</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-paper/20">零依赖</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-lime/40">SPLITTEXT</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-paper/20">框架无关</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-lime/40">MORPHSVG</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-paper/20">1200万+网站</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-lime/40">FLIP</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-paper/20">跨浏览器兼容</span>
+      <span class="font-display text-2xl lg:text-3xl font-bold text-lime/40">MOTIONPATH</span>
+    </div>
+  </section>
+
+  <!-- ===================== INTRO ===================== -->
+  <section id="intro" class="py-32 relative">
+    <div class="max-w-[1400px] mx-auto px-6 lg:px-10">
+      <div class="grid lg:grid-cols-12 gap-12 lg:gap-20 items-start">
+
+        <!-- Left: Section label -->
+        <div class="lg:col-span-4 lg:sticky lg:top-28">
+          <div class="text-xs font-mono text-lime mb-4">01 / 简介</div>
+          <h2 class="font-display text-4xl lg:text-5xl font-bold tracking-tighter leading-[1.05] reveal-up">
+            动画超级英雄的<br /><span class="gradient-lime">武器库</span>
+          </h2>
+        </div>
+
+        <!-- Right: Content -->
+        <div class="lg:col-span-8 space-y-8">
+          <p class="text-xl lg:text-2xl leading-relaxed text-paper reveal-up">
+            没有其他库能同时提供如此先进的<strong class="text-lime">序列编排</strong>、可靠性和精细控制，同时还能解决超过 <strong class="text-lime">1200 万个网站</strong>上的实际问题。
+          </p>
+          <p class="text-lg leading-relaxed text-ash reveal-up">
+            GSAP 能绕过无数浏览器兼容性问题——你的动画<em class="text-paper not-italic font-medium">就是能正常运行</em>。GSAP 的核心是一个高速属性操纵器，能以极高精度随时间更新数值。它的速度比 jQuery 快 20 倍！
+          </p>
+
+          <!-- Feature pills -->
+          <div class="flex flex-wrap gap-3 pt-4 reveal-up">
+            <span class="px-4 py-2 glass-lime rounded-full text-sm text-lime font-mono">CSS 动画</span>
+            <span class="px-4 py-2 glass-lime rounded-full text-sm text-lime font-mono">SVG 变形</span>
+            <span class="px-4 py-2 glass-lime rounded-full text-sm text-lime font-mono">Canvas 渲染</span>
+            <span class="px-4 py-2 glass-lime rounded-full text-sm text-lime font-mono">React / Vue</span>
+            <span class="px-4 py-2 glass-lime rounded-full text-sm text-lime font-mono">WebGL</span>
+            <span class="px-4 py-2 glass-lime rounded-full text-sm text-lime font-mono">运动路径</span>
+            <span class="px-4 py-2 glass-lime rounded-full text-sm text-lime font-mono">颜色插值</span>
+            <span class="px-4 py-2 glass-lime rounded-full text-sm text-lime font-mono">字符串动画</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== FEATURES BENTO ===================== -->
+  <section id="features" class="py-32 relative">
+    <div class="max-w-[1400px] mx-auto px-6 lg:px-10">
+
+      <div class="mb-16 max-w-2xl">
+        <div class="text-xs font-mono text-lime mb-4">02 / 核心特性</div>
+        <h2 class="font-display text-4xl lg:text-5xl font-bold tracking-tighter leading-[1.05] reveal-up">
+          为什么选择 <span class="gradient-lime">GSAP？</span>
+        </h2>
+      </div>
+
+      <!-- Bento Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+        <!-- Card 1: High Performance -->
+        <div class="bento-card glass rounded-3xl p-8 lg:col-span-2 reveal-up" data-tilt>
+          <div class="flex items-start justify-between mb-6">
+            <div class="w-12 h-12 rounded-xl bg-lime/10 flex items-center justify-center">
+              <svg class="w-6 h-6 text-lime" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            </div>
+            <span class="text-xs font-mono text-ash">PERFORMANCE</span>
+          </div>
+          <h3 class="font-display text-2xl font-bold mb-3">极致性能</h3>
+          <p class="text-ash leading-relaxed mb-6">GSAP 的核心是一个高速属性操纵器，能以极高精度随时间更新数值。通过智能优化 GPU 加速属性，避免布局抖动，确保 60fps 流畅运行。</p>
+          <div class="flex items-end gap-2 h-20" id="perf-bars">
+            <div class="flex-1 bg-lime/20 rounded-t" style="height: 30%"></div>
+            <div class="flex-1 bg-lime/30 rounded-t" style="height: 45%"></div>
+            <div class="flex-1 bg-lime/40 rounded-t" style="height: 60%"></div>
+            <div class="flex-1 bg-lime/50 rounded-t" style="height: 75%"></div>
+            <div class="flex-1 bg-lime/60 rounded-t" style="height: 85%"></div>
+            <div class="flex-1 bg-lime rounded-t" style="height: 100%"></div>
+          </div>
+        </div>
+
+        <!-- Card 2: Zero Dependencies -->
+        <div class="bento-card glass rounded-3xl p-8 reveal-up" data-tilt>
+          <div class="w-12 h-12 rounded-xl bg-lime/10 flex items-center justify-center mb-6">
+            <svg class="w-6 h-6 text-lime" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+          </div>
+          <h3 class="font-display text-2xl font-bold mb-3">零依赖</h3>
+          <p class="text-ash leading-relaxed">完全灵活，可以在任何地方使用。不依赖任何其他库，体积小巧，加载迅速。</p>
+          <div class="mt-6 font-mono text-3xl font-bold text-lime">0</div>
+          <div class="text-xs text-ash">dependencies</div>
+        </div>
+
+        <!-- Card 3: ScrollTrigger -->
+        <div class="bento-card glass rounded-3xl p-8 reveal-up" data-tilt>
+          <div class="w-12 h-12 rounded-xl bg-lime/10 flex items-center justify-center mb-6">
+            <svg class="w-6 h-6 text-lime" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7" transform="rotate(180 12 12)"/></svg>
+          </div>
+          <h3 class="font-display text-2xl font-bold mb-3">ScrollTrigger</h3>
+          <p class="text-ash leading-relaxed">行业标准级滚动驱动动画插件，用极少代码实现令人惊叹的滚动效果。</p>
+          <div class="mt-6 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-lime animate-pulse"></span>
+            <span class="text-xs font-mono text-ash">行业标准</span>
+          </div>
+        </div>
+
+        <!-- Card 4: Cross Browser -->
+        <div class="bento-card glass rounded-3xl p-8 reveal-up" data-tilt>
+          <div class="w-12 h-12 rounded-xl bg-lime/10 flex items-center justify-center mb-6">
+            <svg class="w-6 h-6 text-lime" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20"/></svg>
+          </div>
+          <h3 class="font-display text-2xl font-bold mb-3">跨浏览器兼容</h3>
+          <p class="text-ash leading-relaxed">绕过无数浏览器兼容性问题，你的动画在所有主流浏览器中都能正常运行。</p>
+          <div class="mt-6 flex flex-wrap gap-2 text-xs font-mono text-ash">
+            <span>Chrome</span><span>·</span><span>Firefox</span><span>·</span><span>Safari</span><span>·</span><span>Edge</span>
+          </div>
+        </div>
+
+        <!-- Card 5: Match Media -->
+        <div class="bento-card glass rounded-3xl p-8 lg:col-span-2 reveal-up" data-tilt>
+          <div class="flex items-start justify-between mb-6">
+            <div class="w-12 h-12 rounded-xl bg-lime/10 flex items-center justify-center">
+              <svg class="w-6 h-6 text-lime" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            </div>
+            <span class="text-xs font-mono text-ash">RESPONSIVE</span>
+          </div>
+          <h3 class="font-display text-2xl font-bold mb-3">响应式 & 无障碍</h3>
+          <p class="text-ash leading-relaxed mb-6">gsap.matchMedia() 让构建响应式动画变得轻而易举。自动处理不同屏幕尺寸的动画逻辑，支持 prefers-reduced-motion 无障碍偏好。</p>
+          <div class="grid grid-cols-3 gap-3">
+            <div class="glass-lime rounded-xl p-3 text-center">
+              <div class="font-mono text-lg text-lime font-bold">768px</div>
+              <div class="text-xs text-ash mt-1">平板</div>
+            </div>
+            <div class="glass-lime rounded-xl p-3 text-center">
+              <div class="font-mono text-lg text-lime font-bold">1024px</div>
+              <div class="text-xs text-ash mt-1">桌面</div>
+            </div>
+            <div class="glass-lime rounded-xl p-3 text-center">
+              <div class="font-mono text-lg text-lime font-bold">4K+</div>
+              <div class="text-xs text-ash mt-1">大屏</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SCROLL DEMO (PINNED) ===================== -->
+  <section id="scroll-demo" class="relative">
+    <div class="max-w-[1400px] mx-auto px-6 lg:px-10 py-20">
+      <div class="mb-12 max-w-2xl">
+        <div class="text-xs font-mono text-lime mb-4">03 / ScrollTrigger 实战</div>
+        <h2 class="font-display text-4xl lg:text-5xl font-bold tracking-tighter leading-[1.05] reveal-up">
+          滚动驱动的<br /><span class="gradient-lime">动画叙事</span>
+        </h2>
+        <p class="text-ash mt-6 text-lg">向下滚动，体验 GSAP ScrollTrigger 的力量——固定、联动、视差，一切随你掌控。</p>
+      </div>
+    </div>
+
+    <!-- Pinned horizontal scroll -->
+    <div id="pin-wrapper" class="relative">
+      <div id="pin-container" class="h-screen overflow-hidden flex items-center sticky top-0">
+        <div id="pin-track" class="flex gap-8 px-6 lg:px-10 will-change-transform">
+
+          <div class="h-panel flex flex-col justify-center">
+            <div class="glass-lime rounded-3xl p-10 lg:p-14 h-[60vh] flex flex-col justify-center">
+              <div class="text-xs font-mono text-lime mb-4">SCENE 01</div>
+              <h3 class="font-display text-3xl lg:text-5xl font-bold tracking-tighter mb-4">极少的代码</h3>
+              <p class="text-ash text-lg leading-relaxed">ScrollTrigger 让你用几行代码就能创建复杂的滚动动画。无需繁琐的事件监听，无需手动计算滚动位置。</p>
+              <div class="mt-8 code-block">
+                <pre><span class="code-kw">gsap</span>.to(<span class="code-str">'.box'</span>, {
+  <span class="code-attr">scrollTrigger</span>: {
+    <span class="code-attr">trigger</span>: <span class="code-str">'.box'</span>,
+    <span class="code-attr">start</span>: <span class="code-str">'top center'</span>,
+    <span class="code-attr">scrub</span>: <span class="code-kw">true</span>
+  },
+  <span class="code-attr">rotation</span>: <span class="code-str">360</span>,
+  <span class="code-attr">duration</span>: <span class="code-str">3</span>
+});</pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="h-panel flex flex-col justify-center">
+            <div class="glass-lime rounded-3xl p-10 lg:p-14 h-[60vh] flex flex-col justify-center items-center text-center">
+              <div class="text-xs font-mono text-lime mb-4">SCENE 02</div>
+              <h3 class="font-display text-3xl lg:text-5xl font-bold tracking-tighter mb-4">固定 & 联动</h3>
+              <p class="text-ash text-lg leading-relaxed mb-8">将元素固定在视口中，同时驱动动画进度，创造沉浸式叙事体验。</p>
+              <!-- Animated boxes -->
+              <div class="flex items-center gap-4">
+                <div class="w-16 h-16 rounded-2xl bg-lime/20 border border-lime/30" id="scroll-box-1"></div>
+                <div class="w-16 h-16 rounded-2xl bg-lime/30 border border-lime/40" id="scroll-box-2"></div>
+                <div class="w-16 h-16 rounded-2xl bg-lime/40 border border-lime/50" id="scroll-box-3"></div>
+                <div class="w-16 h-16 rounded-2xl bg-lime/60 border border-lime/70" id="scroll-box-4"></div>
+                <div class="w-16 h-16 rounded-2xl bg-lime border-lime" id="scroll-box-5"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="h-panel flex flex-col justify-center">
+            <div class="glass-lime rounded-3xl p-10 lg:p-14 h-[60vh] flex flex-col justify-center">
+              <div class="text-xs font-mono text-lime mb-4">SCENE 03</div>
+              <h3 class="font-display text-3xl lg:text-5xl font-bold tracking-tighter mb-4">视差滚动</h3>
+              <p class="text-ash text-lg leading-relaxed mb-8">不同元素以不同速度移动，营造深度和空间感。每一层都有自己节奏。</p>
+              <div class="relative h-40 rounded-2xl overflow-hidden bg-ink2">
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <div class="absolute left-[10%] top-[20%] w-8 h-8 rounded-full bg-lime/20 blur-sm" data-parallax-demo="0.2"></div>
+                  <div class="absolute left-[30%] top-[50%] w-12 h-12 rounded-full bg-lime/30 blur-sm" data-parallax-demo="0.4"></div>
+                  <div class="absolute left-[60%] top-[30%] w-10 h-10 rounded-full bg-lime/50 blur-sm" data-parallax-demo="0.6"></div>
+                  <div class="absolute left-[80%] top-[60%] w-6 h-6 rounded-full bg-lime blur-sm" data-parallax-demo="0.8"></div>
+                </div>
+                <div class="absolute bottom-4 left-4 text-xs font-mono text-ash">多层视差 · 不同速度</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="h-panel flex flex-col justify-center">
+            <div class="glass-lime rounded-3xl p-10 lg:p-14 h-[60vh] flex flex-col justify-center items-center text-center">
+              <div class="text-xs font-mono text-lime mb-4">SCENE 04</div>
+              <h3 class="font-display text-3xl lg:text-5xl font-bold tracking-tighter mb-4">无限可能</h3>
+              <p class="text-ash text-lg leading-relaxed mb-8">从简单的淡入到复杂的时间线编排，ScrollTrigger 都能胜任。这就是行业标准的实力。</p>
+              <a href="https://gsap.com/docs/v3/Plugins/ScrollTrigger/" target="_blank" rel="noopener" class="magnetic-btn px-8 py-3.5 bg-lime text-ink rounded-full font-medium hover:bg-lime2 transition-colors">
+                探索 ScrollTrigger
+              </a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PLUGINS (HORIZONTAL TEXT) ===================== -->
+  <section id="plugins" class="py-32 relative overflow-hidden">
+    <div class="max-w-[1400px] mx-auto px-6 lg:px-10 mb-16">
+      <div class="text-xs font-mono text-lime mb-4">04 / 插件生态</div>
+      <h2 class="font-display text-4xl lg:text-5xl font-bold tracking-tighter leading-[1.05] reveal-up max-w-2xl">
+        强大的<span class="gradient-lime">插件</span>与<span class="gradient-lime">缓动</span>函数
+      </h2>
+      <p class="text-ash mt-6 text-lg max-w-2xl reveal-up">
+        可选插件和缓动函数让你轻松实现高级效果——滚动、变形、文本拆分、运动路径、FLIP 动画……应有尽有。
+      </p>
+    </div>
+
+    <!-- Plugin cards with stagger reveal -->
+    <div class="max-w-[1400px] mx-auto px-6 lg:px-10">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <!-- ScrollTrigger -->
+        <div class="plugin-card bento-card glass rounded-3xl p-8 group cursor-pointer reveal-up">
+          <div class="flex items-start justify-between mb-6">
+            <h3 class="font-display text-2xl font-bold">ScrollTrigger</h3>
+            <span class="px-3 py-1 text-xs font-mono bg-lime/10 text-lime rounded-full">滚动动画</span>
+          </div>
+          <p class="text-ash leading-relaxed mb-4">行业标准级滚动驱动动画。创建令人惊叹的滚动效果——固定、联动、视差、进度条，用极少的代码实现。</p>
+          <div class="flex items-center gap-2 text-lime text-sm font-mono group-hover:gap-3 transition-all">
+            <span>了解更多</span>
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+        </div>
+
+        <!-- SplitText -->
+        <div class="plugin-card bento-card glass rounded-3xl p-8 group cursor-pointer reveal-up">
+          <div class="flex items-start justify-between mb-6">
+            <h3 class="font-display text-2xl font-bold">SplitText</h3>
+            <span class="px-3 py-1 text-xs font-mono bg-lime/10 text-lime rounded-full">文本拆分</span>
+          </div>
+          <p class="text-ash leading-relaxed mb-4">将文本拆分为字符、单词或行，实现逐字逐行的精细动画。创建引人注目的标题动画和文字效果。</p>
+          <div class="flex items-center gap-2 text-lime text-sm font-mono group-hover:gap-3 transition-all">
+            <span>了解更多</span>
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+        </div>
+
+        <!-- MorphSVG -->
+        <div class="plugin-card bento-card glass rounded-3xl p-8 group cursor-pointer reveal-up">
+          <div class="flex items-start justify-between mb-6">
+            <h3 class="font-display text-2xl font-bold">MorphSVG</h3>
+            <span class="px-3 py-1 text-xs font-mono bg-lime/10 text-lime rounded-full">SVG 变形</span>
+          </div>
+          <p class="text-ash leading-relaxed mb-4">在任意两个 SVG 路径之间实现平滑变形动画。从圆形到星形，从简单到复杂，变形从未如此优雅。</p>
+          <div class="flex items-center gap-2 text-lime text-sm font-mono group-hover:gap-3 transition-all">
+            <span>了解更多</span>
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+        </div>
+
+        <!-- MotionPath -->
+        <div class="plugin-card bento-card glass rounded-3xl p-8 group cursor-pointer reveal-up">
+          <div class="flex items-start justify-between mb-6">
+            <h3 class="font-display text-2xl font-bold">MotionPathPlugin</h3>
+            <span class="px-3 py-1 text-xs font-mono bg-lime/10 text-lime rounded-full">运动路径</span>
+          </div>
+          <p class="text-ash leading-relaxed mb-4">让元素沿任意 SVG 路径运动。创建曲线飞行、轨道旋转、波浪前进等复杂运动轨迹。</p>
+          <div class="flex items-center gap-2 text-lime text-sm font-mono group-hover:gap-3 transition-all">
+            <span>了解更多</span>
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+        </div>
+
+        <!-- Flip -->
+        <div class="plugin-card bento-card glass rounded-3xl p-8 group cursor-pointer reveal-up">
+          <div class="flex items-start justify-between mb-6">
+            <h3 class="font-display text-2xl font-bold">Flip</h3>
+            <span class="px-3 py-1 text-xs font-mono bg-lime/10 text-lime rounded-full">FLIP 动画</span>
+          </div>
+          <p class="text-ash leading-relaxed mb-4">First-Last-Invert-Play 技术。在任何状态变化之间创建平滑过渡动画——列表重排、布局变化、视图切换。</p>
+          <div class="flex items-center gap-2 text-lime text-sm font-mono group-hover:gap-3 transition-all">
+            <span>了解更多</span>
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+        </div>
+
+        <!-- Observer -->
+        <div class="plugin-card bento-card glass rounded-3xl p-8 group cursor-pointer reveal-up">
+          <div class="flex items-start justify-between mb-6">
+            <h3 class="font-display text-2xl font-bold">Observer</h3>
+            <span class="px-3 py-1 text-xs font-mono bg-lime/10 text-lime rounded-full">事件标准化</span>
+          </div>
+          <p class="text-ash leading-relaxed mb-4">在浏览器和设备间标准化事件检测。统一处理鼠标、触摸、滚轮、指针事件，简化跨平台交互开发。</p>
+          <div class="flex items-center gap-2 text-lime text-sm font-mono group-hover:gap-3 transition-all">
+            <span>了解更多</span>
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== INSTALL ===================== -->
+  <section id="install" class="py-32 relative">
+    <div class="max-w-[1400px] mx-auto px-6 lg:px-10">
+      <div class="grid lg:grid-cols-12 gap-12 lg:gap-20">
+
+        <!-- Left -->
+        <div class="lg:col-span-5">
+          <div class="text-xs font-mono text-lime mb-4">05 / 安装与使用</div>
+          <h2 class="font-display text-4xl lg:text-5xl font-bold tracking-tighter leading-[1.05] reveal-up mb-6">
+            三种方式，<br /><span class="gradient-lime">即刻开始</span>
+          </h2>
+          <p class="text-ash text-lg leading-relaxed reveal-up mb-8">
+            无论你使用 CDN、NPM 还是模块打包器，GSAP 都能轻松集成到你的项目中。核心库包含所有实用方法和缓动函数。
+          </p>
+
+          <!-- Free badge -->
+          <div class="glass-lime rounded-2xl p-6 reveal-up">
+            <div class="flex items-center gap-3 mb-3">
+              <svg class="w-6 h-6 text-lime" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+              <h3 class="font-display text-xl font-bold">100% 免费！</h3>
+            </div>
+            <p class="text-ash text-sm leading-relaxed">
+              感谢 Webflow，GSAP 现在<strong class="text-paper">完全免费</strong>，包括所有高级插件如 SplitText、MorphSVG 以及其他 Club GSAP 会员专属功能。即使是商业用途也完全免费！
+            </p>
+          </div>
+        </div>
+
+        <!-- Right: Code examples -->
+        <div class="lg:col-span-7 space-y-6">
+
+          <!-- CDN -->
+          <div class="reveal-up">
+            <div class="flex items-center gap-3 mb-3">
+              <span class="w-8 h-8 rounded-lg bg-lime/10 flex items-center justify-center font-mono text-sm text-lime font-bold">1</span>
+              <h3 class="font-display text-lg font-bold">CDN 引入</h3>
+            </div>
+            <div class="code-block">
+              <div class="flex items-center gap-2 px-4 py-2 border-b border-white/5">
+                <span class="w-3 h-3 rounded-full bg-red-500/30"></span>
+                <span class="w-3 h-3 rounded-full bg-yellow-500/30"></span>
+                <span class="w-3 h-3 rounded-full bg-green-500/30"></span>
+                <span class="ml-2 text-xs font-mono text-ash">HTML</span>
+              </div>
+              <pre><span class="code-com">&lt;!-- GSAP 核心 --&gt;</span>
+<span class="code-tag">&lt;script</span> <span class="code-attr">src</span>=<span class="code-str">"https://cdn.jsdelivr.net/npm/gsap@3.15/dist/gsap.min.js"</span><span class="code-tag">&gt;&lt;/script&gt;</span>
+
+<span class="code-com">&lt;!-- ScrollTrigger 插件 --&gt;</span>
+<span class="code-tag">&lt;script</span> <span class="code-attr">src</span>=<span class="code-str">"https://cdn.jsdelivr.net/npm/gsap@3.15/dist/ScrollTrigger.min.js"</span><span class="code-tag">&gt;&lt;/script&gt;</span></pre>
+            </div>
+          </div>
+
+          <!-- NPM -->
+          <div class="reveal-up">
+            <div class="flex items-center gap-3 mb-3">
+              <span class="w-8 h-8 rounded-lg bg-lime/10 flex items-center justify-center font-mono text-sm text-lime font-bold">2</span>
+              <h3 class="font-display text-lg font-bold">NPM 安装</h3>
+            </div>
+            <div class="code-block">
+              <div class="flex items-center gap-2 px-4 py-2 border-b border-white/5">
+                <span class="w-3 h-3 rounded-full bg-red-500/30"></span>
+                <span class="w-3 h-3 rounded-full bg-yellow-500/30"></span>
+                <span class="w-3 h-3 rounded-full bg-green-500/30"></span>
+                <span class="ml-2 text-xs font-mono text-ash">Terminal</span>
+              </div>
+              <pre><span class="code-fn">npm</span> install gsap</pre>
+            </div>
+          </div>
+
+          <!-- ES Module -->
+          <div class="reveal-up">
+            <div class="flex items-center gap-3 mb-3">
+              <span class="w-8 h-8 rounded-lg bg-lime/10 flex items-center justify-center font-mono text-sm text-lime font-bold">3</span>
+              <h3 class="font-display text-lg font-bold">模块导入</h3>
+            </div>
+            <div class="code-block">
+              <div class="flex items-center gap-2 px-4 py-2 border-b border-white/5">
+                <span class="w-3 h-3 rounded-full bg-red-500/30"></span>
+                <span class="w-3 h-3 rounded-full bg-yellow-500/30"></span>
+                <span class="w-3 h-3 rounded-full bg-green-500/30"></span>
+                <span class="ml-2 text-xs font-mono text-ash">JavaScript</span>
+              </div>
+              <pre><span class="code-com">// 典型导入方式</span>
+<span class="code-kw">import</span> gsap <span class="code-kw">from</span> <span class="code-str">"gsap"</span>;
+<span class="code-kw">import</span> ScrollTrigger <span class="code-kw">from</span> <span class="code-str">"gsap/ScrollTrigger"</span>;
+<span class="code-kw">import</span> Flip <span class="code-kw">from</span> <span class="code-str">"gsap/Flip"</span>;
+<span class="code-kw">import</span> Draggable <span class="code-kw">from</span> <span class="code-str">"gsap/Draggable"</span>;
+
+<span class="code-com">// 别忘了注册插件</span>
+<span class="code-kw">gsap</span>.<span class="code-fn">registerPlugin</span>(ScrollTrigger, Draggable, Flip);</pre>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== RESOURCES ===================== -->
+  <section id="resources" class="py-32 relative">
+    <div class="max-w-[1400px] mx-auto px-6 lg:px-10">
+
+      <div class="mb-16 max-w-2xl">
+        <div class="text-xs font-mono text-lime mb-4">06 / 资源</div>
+        <h2 class="font-display text-4xl lg:text-5xl font-bold tracking-tighter leading-[1.05] reveal-up">
+          学习与<span class="gradient-lime">社区</span>
+        </h2>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+        <a href="https://gsap.com/" target="_blank" rel="noopener" class="resource-link bento-card glass rounded-2xl p-6 group reveal-up block">
+          <div class="flex items-center justify-between mb-4">
+            <span class="font-mono text-xs text-ash">官方网站</span>
+            <svg class="w-4 h-4 text-lime group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M7 7h10v10"/></svg>
+          </div>
+          <h3 class="font-display text-lg font-bold mb-1">gsap.com</h3>
+          <p class="text-sm text-ash">探索 GSAP 的完整生态</p>
+        </a>
+
+        <a href="https://gsap.com/get-started/" target="_blank" rel="noopener" class="resource-link bento-card glass rounded-2xl p-6 group reveal-up block">
+          <div class="flex items-center justify-between mb-4">
+            <span class="font-mono text-xs text-ash">入门指南</span>
+            <svg class="w-4 h-4 text-lime group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M7 7h10v10"/></svg>
+          </div>
+          <h3 class="font-display text-lg font-bold mb-1">快速上手</h3>
+          <p class="text-sm text-ash">从零开始学习 GSAP</p>
+        </a>
+
+        <a href="https://gsap.com/docs/" target="_blank" rel="noopener" class="resource-link bento-card glass rounded-2xl p-6 group reveal-up block">
+          <div class="flex items-center justify-between mb-4">
+            <span class="font-mono text-xs text-ash">完整文档</span>
+            <svg class="w-4 h-4 text-lime group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M7 7h10v10"/></svg>
+          </div>
+          <h3 class="font-display text-lg font-bold mb-1">API 文档</h3>
+          <p class="text-sm text-ash">详细的 API 参考与示例</p>
+        </a>
+
+        <a href="https://gsap.com/demos" target="_blank" rel="noopener" class="resource-link bento-card glass rounded-2xl p-6 group reveal-up block">
+          <div class="flex items-center justify-between mb-4">
+            <span class="font-mono text-xs text-ash">演示模板</span>
+            <svg class="w-4 h-4 text-lime group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M7 7h10v10"/></svg>
+          </div>
+          <h3 class="font-display text-lg font-bold mb-1">演示与模板</h3>
+          <p class="text-sm text-ash">可复用的动画示例</p>
+        </a>
+
+        <a href="https://gsap.com/community/" target="_blank" rel="noopener" class="resource-link bento-card glass rounded-2xl p-6 group reveal-up block">
+          <div class="flex items-center justify-between mb-4">
+            <span class="font-mono text-xs text-ash">社区论坛</span>
+            <svg class="w-4 h-4 text-lime group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M7 7h10v10"/></svg>
+          </div>
+          <h3 class="font-display text-lg font-bold mb-1">GSAP 论坛</h3>
+          <p class="text-sm text-ash">提问、分享、帮助他人</p>
+        </a>
+
+        <a href="https://gsap.com/cheatsheet" target="_blank" rel="noopener" class="resource-link bento-card glass rounded-2xl p-6 group reveal-up block">
+          <div class="flex items-center justify-between mb-4">
+            <span class="font-mono text-xs text-ash">速查表</span>
+            <svg class="w-4 h-4 text-lime group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M7 7h10v10"/></svg>
+          </div>
+          <h3 class="font-display text-lg font-bold mb-1">Cheat Sheet</h3>
+          <p class="text-sm text-ash">常用 API 快速参考</p>
+        </a>
+
+        <a href="https://gsap.com/docs/v3/Eases" target="_blank" rel="noopener" class="resource-link bento-card glass rounded-2xl p-6 group reveal-up block">
+          <div class="flex items-center justify-between mb-4">
+            <span class="font-mono text-xs text-ash">可视化工具</span>
+            <svg class="w-4 h-4 text-lime group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M7 7h10v10"/></svg>
+          </div>
+          <h3 class="font-display text-lg font-bold mb-1">缓动可视化</h3>
+          <p class="text-sm text-ash">交互式缓动函数浏览器</p>
+        </a>
+
+        <a href="https://gsap.com/showcase" target="_blank" rel="noopener" class="resource-link bento-card glass rounded-2xl p-6 group reveal-up block">
+          <div class="flex items-center justify-between mb-4">
+            <span class="font-mono text-xs text-ash">案例展示</span>
+            <svg class="w-4 h-4 text-lime group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M7 7h10v10"/></svg>
+          </div>
+          <h3 class="font-display text-lg font-bold mb-1">Showcase</h3>
+          <p class="text-sm text-ash">GSAP 精彩案例集锦</p>
+        </a>
+
+        <a href="https://www.youtube.com/@GreenSockLearning" target="_blank" rel="noopener" class="resource-link bento-card glass rounded-2xl p-6 group reveal-up block">
+          <div class="flex items-center justify-between mb-4">
+            <span class="font-mono text-xs text-ash">视频教程</span>
+            <svg class="w-4 h-4 text-lime group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M7 7h10v10"/></svg>
+          </div>
+          <h3 class="font-display text-lg font-bold mb-1">YouTube 频道</h3>
+          <p class="text-sm text-ash">GreenSock 官方视频教程</p>
+        </a>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== FOOTER CTA ===================== -->
+  <section class="py-32 relative overflow-hidden">
+    <div class="max-w-[1400px] mx-auto px-6 lg:px-10 text-center relative z-10">
+
+      <!-- Big animated text -->
+      <h2 class="font-display text-[clamp(3rem,12vw,10rem)] font-bold tracking-tighter leading-[0.9] mb-8">
+        <span class="block footer-text overflow-hidden">让创意</span>
+        <span class="block footer-text gradient-lime overflow-hidden">不再受限</span>
+      </h2>
+
+      <p class="text-ash text-lg lg:text-xl max-w-2xl mx-auto mb-12 reveal-up">
+        加入超过 1200 万个网站的开发者行列，用 GSAP 创造令人惊叹的动画体验。
+      </p>
+
+      <div class="flex flex-wrap items-center justify-center gap-4 reveal-up">
+        <a href="https://gsap.com/get-started" target="_blank" rel="noopener" class="magnetic-btn px-10 py-4 bg-lime text-ink rounded-full font-bold text-lg hover:bg-lime2 transition-colors">
+          免费开始使用
+        </a>
+        <a href="https://gsap.com/community/" target="_blank" rel="noopener" class="px-10 py-4 glass rounded-full font-bold text-lg text-paper hover:bg-white/5 transition-colors">
+          加入社区
+        </a>
+      </div>
+    </div>
+
+    <!-- Background glow -->
+    <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-lime/10 blur-[120px] rounded-full pointer-events-none"></div>
+  </section>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="border-t border-white/5 py-12">
+    <div class="max-w-[1400px] mx-auto px-6 lg:px-10">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-3">
+          <span class="font-display text-lg font-bold tracking-tighter text-lime">GSAP</span>
+          <span class="text-ash text-xs font-mono">GreenSock 动画平台 · v3.15</span>
+        </div>
+        <div class="flex items-center gap-6 text-sm text-ash">
+          <a href="https://gsap.com/standard-license" target="_blank" rel="noopener" class="link-underline hover:text-paper transition-colors">许可证</a>
+          <a href="https://gsap.com/docs" target="_blank" rel="noopener" class="link-underline hover:text-paper transition-colors">文档</a>
+          <a href="https://gsap.com/community/" target="_blank" rel="noopener" class="link-underline hover:text-paper transition-colors">论坛</a>
+          <a href="https://webflow.com" target="_blank" rel="noopener" class="link-underline hover:text-paper transition-colors">Webflow</a>
+        </div>
+      </div>
+      <div class="mt-6 text-center md:text-left text-xs text-ash/60">
+        Copyright (c) 2008-2026, GreenSock. All rights reserved. · 本页面基于 GSAP README 内容创建，仅作展示用途。
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===================== SCRIPTS（外部文件，避免 CSP 内联脚本限制） ===================== -->
+  <script src="app.js"></script>
+
+</body>
+</html>
